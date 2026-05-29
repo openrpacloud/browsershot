@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  browsershot-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: openrpa/browsershot-service:latest
+    container_name: browsershot-server
+    ports:
+      - "8080:8080"
+    environment:
+      - MAX_CONCURRENCY=10
+      - DEFAULT_TIMEOUT=30
+      - DEFAULT_WIDTH=1920
+      - DEFAULT_HEIGHT=1080
+    # 关键：Chrome需要共享内存，否则会崩溃
+    shm_size: '1gb'
+    volumes:
+      # 开发模式：挂载源码便于调试
+      - ./src:/app/src
+      - ./bin:/app/bin
+      - ./server:/app/server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    # 安全配置：限制资源使用
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+networks:
+  default:
+    name: browsershot-network
