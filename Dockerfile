@@ -7,6 +7,7 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
 # 安装依赖：Chromium + PHP（headless模式精简）
 RUN apk add --no-cache \
+    curl \
     chromium \
     nss \
     freetype \
