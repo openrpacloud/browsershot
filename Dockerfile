@@ -12,6 +12,8 @@ RUN apk add --no-cache \
     pango \
     ca-certificates \
     ttf-freefont \
+    font-noto-cjk \
+    wqy-zenhei \
     php82 \
     php82-cli \
     php82-json \
