@@ -4,22 +4,54 @@
 
 ## 快速开始
 
-### 1. 构建并启动服务
+### 1. 构建Docker镜像
+
+镜像采用预打包 vendor 依赖方式，构建时无需下载 PHP 依赖包。
 
 ```bash
 cd /Users/mac/go/src/github.com/openrpacloud/browsershot
 
-# 构建镜像
-docker-compose build
+# 构建镜像（首次约5-10分钟，下载Chromium约150MB）
+docker build -t openrpa/browsershot-service:latest .
 
-# 启动服务
+# 或使用 docker-compose 构建
+docker-compose build
+```
+
+**构建时间说明：**
+
+| 构建阶段 | 内容 | 首次耗时 | 后续耗时 |
+|---------|------|---------|---------|
+| 基础镜像 | node:22-alpine | ~30秒 | 0秒（缓存） |
+| 系统依赖 | Chromium + PHP | ~5分钟 | 0秒（缓存） |
+| Puppeteer | puppeteer@23.0.2 | ~30秒 | 0秒（缓存） |
+| 应用代码 | src/ + vendor/ + server.php | ~5秒 | ~5秒 |
+
+**加速技巧：**
+- Dockerfile 层顺序已优化：系统依赖在前，应用代码在后
+- 修改代码重新构建时，前3层缓存复用，只需5秒
+- 依赖版本固定（puppeteer@23.0.2），避免意外触发重新下载
+
+### 2. 启动服务
+
+```bash
+# 使用 docker-compose 启动（推荐）
 docker-compose up -d
+
+# 或直接运行镜像
+docker run -d \
+  --name browsershot-server \
+  -p 8080:8080 \
+  --shm-size=1g \
+  openrpa/browsershot-service:latest
 
 # 查看日志
 docker-compose logs -f
+# 或
+docker logs -f browsershot-server
 ```
 
-### 2. 健康检查
+### 3. 健康检查
 
 ```bash
 curl http://localhost:8080/health
@@ -35,7 +67,7 @@ curl http://localhost:8080/health
 }
 ```
 
-### 3. HTML转图片
+### 4. HTML转图片
 
 ```bash
 curl -X POST http://localhost:8080/screenshot \
