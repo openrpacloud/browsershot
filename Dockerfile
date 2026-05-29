@@ -1,30 +1,27 @@
 # Browsershot Service - 单阶段Alpine构建
 FROM node:22-alpine
 
-# 安装所有依赖：Chromium + PHP + 运行库
+# 添加 community 仓库以获取 PHP
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
+    echo "https://mirrors.aliyun.com/alpine/v3.20/community" >> /etc/apk/repositories
+
+# 安装依赖：Chromium + PHP（headless模式精简）
 RUN apk add --no-cache \
     chromium \
     nss \
     freetype \
     harfbuzz \
+    pango \
     ca-certificates \
     ttf-freefont \
-    dbus \
-    xvfb \
     php82 \
     php82-cli \
     php82-json \
     php82-openssl \
     php82-mbstring \
     php82-fileinfo \
-    bash \
-    curl \
-    pango \
-    libxcomposite \
-    libxdamage \
-    libxfixes \
-    libxrandr \
-    mesa-gl
+    php82-phar \
+    php82-curl
 
 # 设置Puppeteer使用系统Chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
@@ -38,19 +35,18 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 # 安装Puppeteer
 RUN npm install -g puppeteer@23.0.2
 
-# 安装Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN ln -s /usr/bin/php82 /usr/bin/php && \
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 WORKDIR /app
 
-# 复制Browsershot源码和服务
 COPY src/ /app/src/
 COPY bin/ /app/bin/
-COPY server/ /app/server/
+COPY server/composer.json /app/server/composer.json
 
-# 安装PHP依赖
 WORKDIR /app/server
-RUN composer install --no-dev --optimize-autoloader
+RUN composer update --no-dev --optimize-autoloader --with-all-dependencies && \
+    echo '<?php // platform check disabled' > vendor/composer/platform_check.php
 
 WORKDIR /app
 

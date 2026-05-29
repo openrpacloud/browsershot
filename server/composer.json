@@ -5,7 +5,8 @@
     "require": {
         "php": "^8.2",
         "spatie/browsershot": "^5.4",
-        "symfony/process": "^7.0|^8.0"
+        "spatie/temporary-directory": "^2.0",
+        "symfony/process": "^7.0"
     },
     "autoload": {
         "psr-4": {
@@ -13,6 +14,10 @@
         }
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "platform": {
+            "php": "8.2.28"
+        },
+        "platform-check": false
     }
 }
