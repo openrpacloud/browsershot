@@ -27,6 +27,7 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
     NODE_PATH=/usr/local/lib/node_modules \
+    CHROMIUM_WS_PORT=9222 \
     MAX_CONCURRENCY=10 \
     DEFAULT_TIMEOUT=30 \
     DEFAULT_WIDTH=1920 \
@@ -40,9 +41,11 @@ COPY src/ /app/src/
 COPY bin/ /app/bin/
 COPY server/vendor/ /app/server/vendor/
 COPY server/server.php /app/server/server.php
+COPY entrypoint.sh /app/entrypoint.sh
 
-RUN echo '<?php // platform check disabled' > /app/server/vendor/composer/platform_check.php
+RUN chmod +x /app/entrypoint.sh && \
+    echo '<?php // platform check disabled' > /app/server/vendor/composer/platform_check.php
 
 EXPOSE 8080
 
-CMD ["php", "-S", "0.0.0.0:8080", "-t", "server", "server/server.php"]
+ENTRYPOINT ["/app/entrypoint.sh"]

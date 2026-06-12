@@ -71,44 +71,38 @@ const getOutput = async (request, page = null) => {
 const callChrome = async pup => {
     let browser;
     let page;
-    let remoteInstance;
+    let isSharedInstance = false;
     const puppet = (pup || require('puppeteer'));
     const options = request.options ?? {};
 
     const closeBrowser = async () => {
         if (!browser) return;
-        if (remoteInstance && page) {
+        if (isSharedInstance && page) {
             await page.close();
         }
-        await (remoteInstance ? browser.disconnect() : browser.close());
+        await (isSharedInstance ? browser.disconnect() : browser.close());
     };
 
     try {
-        if (options.remoteInstanceUrl || options.browserWSEndpoint) {
-            // default options
-            let connectOptions = {
-                acceptInsecureCerts: options.acceptInsecureCerts
-            };
+        let connectOptions = {};
 
-            // choose only one method to connect to the browser instance
-            if (options.remoteInstanceUrl) {
-                connectOptions.browserURL = options.remoteInstanceUrl;
-            } else if (options.browserWSEndpoint) {
-                connectOptions.browserWSEndpoint = options.browserWSEndpoint;
-            }
+        if (options.remoteInstanceUrl) {
+            connectOptions = { browserURL: options.remoteInstanceUrl, acceptInsecureCerts: options.acceptInsecureCerts };
+        }
 
+        if (options.browserWSEndpoint) {
+            connectOptions = { browserWSEndpoint: options.browserWSEndpoint, acceptInsecureCerts: options.acceptInsecureCerts };
+        }
+
+        if (connectOptions.browserWSEndpoint || connectOptions.browserURL) {
             try {
                 browser = await puppet.connect(connectOptions);
-
-                remoteInstance = true;
+                isSharedInstance = true;
             } catch (exception) {
-
                 if (options.throwOnRemoteConnectionError) {
                     console.error(exception.toString());
                     process.exit(4);
                 }
-
-                /** fallback to launching a chromium instance */
             }
         }
 
