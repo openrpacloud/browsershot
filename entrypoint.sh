@@ -55,9 +55,16 @@ if [ $RETRIES -eq $MAX_RETRIES ]; then
     exit 1
 fi
 
-# Export the WebSocket endpoint URL for PHP to read.
-# Puppeteer's debug endpoint is typically ws://127.0.0.1:<port>/devtools/browser/<guid>
-# Instead of hardcoding the guid, we let PHP discover it via /json/version.
+# Cache the WebSocket endpoint URL to a file so PHP can read it
+# instantly without querying Chromium's HTTP debug endpoint (~4s delay).
+WS_ENDPOINT=$(curl -s http://127.0.0.1:${WS_PORT}/json/version | sed -n 's/.*"webSocketDebuggerUrl":"\([^"]*\)".*/\1/p')
+if [ -n "$WS_ENDPOINT" ]; then
+    echo "$WS_ENDPOINT" > /tmp/chromium_ws_endpoint.cache
+    echo "[entrypoint] Cached WebSocket endpoint: ${WS_ENDPOINT}"
+else
+    echo "[entrypoint] WARNING: Could not extract webSocketDebuggerUrl. PHP will query it on first request."
+fi
+
 export CHROMIUM_WS_PORT="${WS_PORT}"
 
 echo "[entrypoint] Starting PHP server on 0.0.0.0:8080 ..."

@@ -53,13 +53,24 @@ class BrowsershotServer
     private function discoverChromiumWsEndpoint(): void
     {
         $wsPort = (int)($_ENV['CHROMIUM_WS_PORT'] ?? 9222);
-        $url = "http://127.0.0.1:${wsPort}/json/version";
+        $cacheFile = '/tmp/chromium_ws_endpoint.cache';
 
-        $ctx = stream_context_create(['http' => ['timeout' => 2]]);
+        // Fast path: read cached endpoint (written by entrypoint.sh or first discovery)
+        if (file_exists($cacheFile)) {
+            $cached = @file_get_contents($cacheFile);
+            if ($cached && str_starts_with($cached, 'ws://')) {
+                $this->chromiumWsEndpoint = $cached;
+                return;
+            }
+        }
+
+        // Slow path: query Chromium debug port (~4s in container)
+        $url = "http://127.0.0.1:{$wsPort}/json/version";
+        $ctx = stream_context_create(['http' => ['timeout' => 5]]);
         $response = @file_get_contents($url, false, $ctx);
 
         if ($response === false) {
-            error_log("Warning: Could not reach Chromium debug port ${wsPort}. Will fallback to per-request launch.");
+            error_log("Warning: Could not reach Chromium debug port {$wsPort}. Will fallback to per-request launch.");
             return;
         }
 
@@ -70,7 +81,9 @@ class BrowsershotServer
         }
 
         $this->chromiumWsEndpoint = $data['webSocketDebuggerUrl'];
-        error_log("Chromium WebSocket endpoint: {$this->chromiumWsEndpoint}");
+        // Cache for subsequent requests
+        @file_put_contents($cacheFile, $this->chromiumWsEndpoint);
+        error_log("Chromium WebSocket endpoint cached: {$this->chromiumWsEndpoint}");
     }
 
     public function handleRequest(): void
