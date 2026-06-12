@@ -78,9 +78,14 @@ const callChrome = async pup => {
     const closeBrowser = async () => {
         if (!browser) return;
         if (isSharedInstance && page) {
-            await page.close();
+            try { await page.close(); } catch (e) { /* page may already be closed/crashed */ }
         }
-        await (isSharedInstance ? browser.disconnect() : browser.close());
+        try {
+            await (isSharedInstance ? browser.disconnect() : browser.close());
+        } catch (e) {
+            /* disconnect never throws, but close might on zombie browser */
+            if (!isSharedInstance) console.error('browser.close() error:', e.toString());
+        }
     };
 
     try {
